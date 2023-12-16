@@ -111,9 +111,8 @@ def getClassEvictProbability():
 	task_sched_evitctions = (dict(task_sched_evitctions))
 	total_tasks_per_class = task_events.map(lambda x: (int(x[event_type_index_task_event])  , 1)).reduceByKey(lambda x,y : x+y)
 
-	eviction_probability = total_tasks_per_class.map(lambda x: (x[0] , round(task_sched_evitctions[x[0]]*100/x[1],2) ) if x[0] in task_sched_evitctions else (x[0] , 0)).collect()
+	eviction_probability = total_tasks_per_class.map(lambda x: (x[0] , round(task_sched_evitctions[x[0]]/x[1],4) ) if x[0] in task_sched_evitctions else (x[0] , 0)).collect()
 	print(eviction_probability)
-	#TODO 
 
 
 
@@ -158,15 +157,16 @@ if __name__ == "__main__":
 	sc = None
 	schema = None
 	initiateSpark()
-	start = time.time()
-	schema = Schema(sc , "./data/schema.csv")
+	on_gcp = False
+	file_path = "../data/" if not on_gcp else "gs://large-data/data"
+	schema = Schema(sc , file_path+"/schema.csv")
 
 	
-	task_events = loadEvents("./data/task_events/part-00000-of-00500.csv")
+	task_events = loadEvents(file_path+"/task_events/part-00000-of-00500.csv")
 	task_events.cache()
-	machine_events = loadEvents("./data/machine_events/part-00000-of-00001.csv")
-	job_events = loadEvents("./data/job_events/part-00000-of-00500.csv")
-	task_usage = loadEvents("./data/task_usage/part-00000-of-00500.csv")
+	machine_events = loadEvents(file_path+"/machine_events/part-00000-of-00001.csv")
+	job_events = loadEvents(file_path+"/job_events/part-00000-of-00500.csv")
+	task_usage = loadEvents(file_path+"/task_usage/part-00000-of-00500.csv")
 
 
 
