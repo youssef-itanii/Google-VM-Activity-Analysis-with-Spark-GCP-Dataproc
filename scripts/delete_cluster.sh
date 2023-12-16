@@ -10,3 +10,6 @@ fi
 
 gcloud dataproc clusters delete $CLUSTER_NAME --region=$REGION
 
+rm cluster_config.txt
+echo "Deleted configuration file"
+
