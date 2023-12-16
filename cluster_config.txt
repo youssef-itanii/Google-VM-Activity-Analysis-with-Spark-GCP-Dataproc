@@ -1,0 +1,3 @@
+REGION=europe-west1
+ZONE=europe-west1-b
+CLUSTER_NAME=spark-cluster2
