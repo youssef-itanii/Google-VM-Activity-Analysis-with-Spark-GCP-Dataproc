@@ -4,6 +4,12 @@ from pyspark import SparkContext
 import time
 from schema import Schema
 import matplotlib.pyplot as plt
+import json
+
+
+def appendToOutput(key, time , value):
+	global output
+	output[key] = {"time": time , "value":value}
 
 def initiateSpark():
 	global sc
@@ -22,7 +28,7 @@ def loadEvents(file_path:str):
 def getCPUDistribution():
 	print("What is the distribution of the machines according to their CPU capacity?")
 	print("-------------------------------------")
-
+	start = time.time()
 	cpu_index = schema.getFieldNoByContent("machine_events", "CPU")
 	
 	# #Get the index of the machine ID in the task event
@@ -31,7 +37,9 @@ def getCPUDistribution():
 	machine_cpu_distribution = machine_events.filter(lambda x: x[cpu_index]!='').map(lambda x: (x[machine_id_index_task_event], x[cpu_index])).groupByKey()
 	res = machine_cpu_distribution.mapValues(lambda x: list(x)[0])
 	cpu_distribution = res.map(lambda x: (x[1] , 1)).reduceByKey(lambda x,y:x+y).collect()
-	plotDistribution(cpu_distribution , "CPU" , "Machines", "Distribution of CPU Across Machines")
+	# plotDistribution(cpu_distribution , "CPU" , "Machines", "Distribution of CPU Across Machines")
+
+	appendToOutput("CPU_Distribution" , time.time() - start  , cpu_distribution)
 
 	
 	print("=========================================================================================\n")
@@ -87,6 +95,8 @@ def computePowerLost():
 
 
 def getSchedClassDistribution():
+
+	start = time.time()
 	sched_class_index_task_events = schema.getFieldNoByContent("task_events" , "scheduling class")
 	sched_class_index_job_events = schema.getFieldNoByContent("job_events" , "scheduling class")
 	
@@ -95,15 +105,17 @@ def getSchedClassDistribution():
 
 	task_distribution.sort(key=lambda x: x[0])
 	job_distribution.sort(key=lambda x: x[0])
-	plotDistribution(task_distribution , "Class" , "Tasks", "Distribution of Tasks Across Scheduling Classes")
-	plotDistribution(job_distribution , "Class" , "Jobs", "Distribution of Jobs Scheduling Classes")
+	# plotDistribution(task_distribution , "Class" , "Tasks", "Distribution of Tasks Across Scheduling Classes")
+	# plotDistribution(job_distribution , "Class" , "Jobs", "Distribution of Jobs Scheduling Classes")
 
-	print(f"Task distribution {task_distribution}")
-	print(f"Job distribution {job_distribution}")
+
+	appendToOutput("Job_Task_distrubtion" , time.time() - start  , {"Task_distribution" :task_distribution , "Job_distrubtion": job_distribution})
+
 
 
 def getClassEvictProbability():
 	EVICT = '2'
+	start = time.time()
 	event_type_index_task_event = schema.getFieldNoByContent("task_events", "event type")
 	sched_class_index_task_events = schema.getFieldNoByContent("task_events" , "scheduling class")
 
@@ -112,11 +124,13 @@ def getClassEvictProbability():
 	total_tasks_per_class = task_events.map(lambda x: (int(x[event_type_index_task_event])  , 1)).reduceByKey(lambda x,y : x+y)
 
 	eviction_probability = total_tasks_per_class.map(lambda x: (x[0] , round(task_sched_evitctions[x[0]]/x[1],4) ) if x[0] in task_sched_evitctions else (x[0] , 0)).collect()
-	print(eviction_probability)
+	appendToOutput("Class_Eviction_Probabiltiy" , time.time() - start  , eviction_probability)
+
 
 
 
 def getTasksRunningOnMachines():
+	start = time.time()
 	job_id_index_task_events = schema.getFieldNoByContent("task_events" , "job ID")
 	machine_id_index_task_events = schema.getFieldNoByContent("task_events" , "machine ID")
 	event_type_index_task_events = schema.getFieldNoByContent("task_events" , "event type")
@@ -128,7 +142,7 @@ def getTasksRunningOnMachines():
 	#Get how many jobs are each distributed to X machines. 
 	#Example (1,5) 5 jobs are running on 1 machine. (X,Y) Y jobs are each running on X machines
 	job_count = final.map(lambda x: (x[1] , 1)).reduceByKey(lambda x,y:x+y).sortBy(lambda x: x)
-
+	end = time.time() - start
 	print(job_count.collect())
 
 def getTaskConsumption():
@@ -154,6 +168,7 @@ def getTaskConsumption():
 
 
 if __name__ == "__main__":
+	output = {}
 	sc = None
 	schema = None
 	initiateSpark()
@@ -170,11 +185,12 @@ if __name__ == "__main__":
 
 
 
-	# getCPUDistribution()
+	getCPUDistribution()
 	# computePowerLost()
-	# getSchedClassDistribution()
+	getSchedClassDistribution()
 	getClassEvictProbability()
 	# getTasksRunningOnMachines()
 	# getTaskConsumption()
+	print(json.dumps(output))
 
     

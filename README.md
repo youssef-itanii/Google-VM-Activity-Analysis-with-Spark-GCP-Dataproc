@@ -9,7 +9,7 @@ If you don't have a bucket, you can include the -c flag to create a bucket with 
 
 You then need to copy your files to the bucket
 ```bash
-    gsutil cp -r {Target Path} gs://large-data/
+    gsutil cp -r {Target Path} gs://large-data/{Target}
 ```
 
 
