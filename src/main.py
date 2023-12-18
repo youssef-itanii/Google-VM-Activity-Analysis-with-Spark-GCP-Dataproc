@@ -5,6 +5,7 @@ import time
 from schema import Schema
 import matplotlib.pyplot as plt
 import json
+import numpy as np
 
 
 def appendToOutput(key, time , value):
@@ -196,47 +197,93 @@ def getClassEvictProbability():
     appendToOutput("Class_Eviction_Probabiltiy" , time.time() - start  , eviction_probability)
 
 
-def getTasksRunningOnMachines():
+def getNumberOfMachinePerJobTasks():
 
     print("In general, do tasks from the same job run on the same machine?")
     print("-------------------------------------")
 
+    SCHEDULE_EVENT = '1'
+
     start = time.time()
-    job_id_index_task_events = schema.getFieldNoByContent("task_events" , "job ID")
-    machine_id_index_task_events = schema.getFieldNoByContent("task_events" , "machine ID")
-    event_type_index_task_events = schema.getFieldNoByContent("task_events" , "event type")
-    #Get all the SCHEDULED tasks events and how many machines they are running on
-    task_distribution = task_events.filter(lambda x: x[event_type_index_task_events] == '1').map(lambda x: (x[job_id_index_task_events], x[machine_id_index_task_events])).groupByKey()
-    #Get all jobs running on more than one machine only obtain the ones running on more than one machine
-    final = task_distribution.filter(lambda x: len(x[1]) > 1).mapValues(lambda x: len(set(x)))
+    job_id_index = schema.getFieldNoByContent("task_events" , "job ID")
+    machine_id_index = schema.getFieldNoByContent("task_events" , "machine ID")
+    event_type_index = schema.getFieldNoByContent("task_events" , "event type")
+
+    #Get all the SCHEDULE tasks events and how many machines they are running on
+    schedule_events = task_events.filter(lambda x: x[event_type_index] == SCHEDULE_EVENT)
+    
+    #group by / job_id -> List<(machine_id)>
+    machine_ids_per_job_id = schedule_events.map(lambda x: (x[job_id_index], x[machine_id_index])).groupByKey()
+    
+    # get jobs where there tasks are scheduled more than once 
+    non_single_task_jobs = machine_ids_per_job_id.filter(lambda x: len(x[1]) > 1)
+
+    # job_id -> number_of_machine_for_job_tasks 
+    number_of_machines_per_job = non_single_task_jobs.mapValues(lambda x: len(set(x)))
     
     #Get how many jobs are each distributed to X machines. 
     #Example (1,5) 5 jobs are running on 1 machine. (X,Y) Y jobs are each running on X machines
-    job_count = final.map(lambda x: (x[1] , 1)).reduceByKey(lambda x,y:x+y).sortBy(lambda x: x)
+    job_count = number_of_machines_per_job.map(lambda x: (x[1] , 1)).reduceByKey(lambda x,y:x+y).sortBy(lambda x: x)
     end = time.time() - start
     print(job_count.collect())
+
+def helper_getTaskConsumption(resourceName : str, resourceUsageIndex : int, resourceRequestIndex : int):
+
+    task_events_task_index_index = schema.getFieldNoByContent("task_events", "task index")
+    task_events_job_id_index = schema.getFieldNoByContent("task_events" , "job ID")
+
+    task_usage_task_index_index = schema.getFieldNoByContent("task_usage", "task index")
+    task_usage_job_id_index = schema.getFieldNoByContent("task_usage", "job ID")
+
+    filtered_task_events = task_events.filter(lambda e: e[task_events_job_id_index]!='' and e[task_events_task_index_index]!='' and e[resourceRequestIndex]!='')
+    requested_resources_per_task = filtered_task_events.map(lambda e : ((e[task_events_job_id_index],e[task_events_task_index_index]),float(e[resourceRequestIndex])))
+    requested_resources_per_task = requested_resources_per_task.groupByKey().mapValues(lambda x : float(sum(x))/len(x))
+   
+    filtered_task_usage = task_usage.filter(lambda e: e[task_usage_job_id_index]!='' and e[task_usage_task_index_index]!='' and e[resourceUsageIndex]!='')
+    used_resources_per_task = filtered_task_usage.map(lambda e : ((e[task_usage_job_id_index],e[task_usage_task_index_index]),float(e[resourceUsageIndex])))
+    used_resources_per_task = used_resources_per_task.groupByKey().mapValues(lambda x : float(sum(x))/len(x))
+
+    resource_per_task = requested_resources_per_task.join(used_resources_per_task)
+    
+    resource_usage_per_request = resource_per_task.map(lambda x: (x[1][0],x[1][1])).groupByKey()
+
+    number_resource_usage_per_request = dict(resource_usage_per_request.mapValues(lambda x : len(x)).collect())
+    # TODO: Find average and std_dev 
+    # average_resource_usage_per_request = resource_usage_per_request.reduceByKey(lambda a,b:a+b).mapValues(lambda x: )
+    
+    usage_stats_per_request = resource_usage_per_request.map(lambda x: (x[0], np.mean(x[1]), np.std(x[1]))).collect()
+
+    print(usage_stats_per_request)
+    return
+    # Unpack results for plotting
+    values, averages, std_devs = zip(*usage_stats_per_request)
+
+    # Plotting
+    plt.figure(figsize=(8, 6))
+    plt.errorbar(values, averages, yerr=std_devs, fmt='o', capsize=5)
+    plt.xlabel('Values')
+    plt.ylabel('Average')
+    plt.title('Average and Standard Deviation for each Tuple')
+    plt.grid(True)
+    plt.show()
 
 
 def getTaskConsumption():
     print("Are the tasks that request the more resources the one that consume the more resources?")
     print("-------------------------------------")
 
-    task_index_index_task_usage = schema.getFieldNoByContent("task_usage", "task index")
-    job_id_index_task_usage = schema.getFieldNoByContent("task_usage", "job ID")
-    max_cpu_usage_index_task_usage = schema.getFieldNoByContent("task_usage" , "maximum CPU rate")
-    avg_cpu_usage_index_task_usage = schema.getFieldNoByContent("task_usage" , "CPU rate")
-    mem_usage_index_task_usage = schema.getFieldNoByContent("task_usage", "canonical memory usage")
-
-    task_index_index_task_events = schema.getFieldNoByContent("task_usage", "task index")
-    cpu_request_index_task_events = schema.getFieldNoByContent("task_events", "CPU request")
-    memory_request_index_task_events = schema.getFieldNoByContent("task_events", "memory request")
-    job_id_index_task_events = schema.getFieldNoByContent("task_events" , "job ID")
-
-    task_request_details = task_events.map(lambda x: ((x[task_index_index_task_events] , x[job_id_index_task_events]) , {"CPU REQ": x[cpu_request_index_task_events], "MEM_REQ" : x[memory_request_index_task_events]}))
-    task_usage_details = task_usage.map(lambda x: ((x[task_index_index_task_usage], x[job_id_index_task_usage]), {"MAX CPU USAGE": x[max_cpu_usage_index_task_usage], "AVG CPU": x[avg_cpu_usage_index_task_usage],"MEM USAGE": x[mem_usage_index_task_usage]}))
+    task_usage_cpu_index = schema.getFieldNoByContent("task_usage" , "CPU rate")
+    task_events_cpu_request_index = schema.getFieldNoByContent("task_events", "CPU request")
+    helper_getTaskConsumption("CPU", task_usage_cpu_index, task_events_cpu_request_index)
     
-    # joined_data = task_request_details.join(task_usage_details)
-    # print(joined_data.collect()[0:10])
+    task_usage_mem_index = schema.getFieldNoByContent("task_usage", "canonical memory usage")
+    task_events_mem_request_index = schema.getFieldNoByContent("task_events", "memory request")
+
+    task_usage_disk_index = schema.getFieldNoByContent("task_usage", "local disk space usage")
+    task_events_disk_request_index = schema.getFieldNoByContent("task_events", "disk space request")
+    
+
+
 
 
 def getCorrelationPeakAndEvictions():
@@ -265,8 +312,8 @@ if __name__ == "__main__":
     # getCPUDistribution()
     # computePowerLost()
     # getSchedClassDistribution()
-    getClassEvictProbability()
-    # getTasksRunningOnMachines()
-    # getTaskConsumption()
+    # getClassEvictProbability()
+    # getNumberOfMachinePerJobTasks()
+    getTaskConsumption()
     print(json.dumps(output))
     print("------------------- DONE -----------------");
