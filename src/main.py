@@ -44,18 +44,6 @@ def getCPUDistribution():
     print("=========================================================================================\n")
 
 
-
-    
-def isCPUChanging():
-    cpu_index = schema.getFieldNoByContent("machine_events", "CPU")
-    
-    # #Get the index of the machine ID in the task event
-    machine_id_index_task_event = int(schema.getFieldNoByContent("machine_events", "machine ID")) 
-
-    distribution = machine_events.filter(lambda x: x[cpu_index]!='').map(lambda x: (x[machine_id_index_task_event], x[cpu_index])).groupByKey()
-    final = distribution.mapValues(lambda x: set(x)).filter(lambda x: len(x[1])>1).collect()
-    print(final)
-
 # takes as params list of (timestamp, EVENT_TYPE(ADD|REMOVE|UPDATE), cpu) and maxTime of trace
 # returns list of (time_on,time_off,cpu) which represents the time where the machine was on and off
 # with the corresponding cpu ratio (A machine resources could get updated)
@@ -157,6 +145,9 @@ def computePowerLost():
 
 def getSchedClassDistribution():
 
+    print(" What is the distribution of the number of jobs/tasks per scheduling class?")
+    print("-------------------------------------")
+
     start = time.time()
     sched_class_index_task_events = schema.getFieldNoByContent("task_events" , "scheduling class")
     sched_class_index_job_events = schema.getFieldNoByContent("job_events" , "scheduling class")
@@ -173,8 +164,11 @@ def getSchedClassDistribution():
     appendToOutput("Job_Task_distrubtion" , time.time() - start  , {"Task_distribution" :task_distribution , "Job_distrubtion": job_distribution})
 
 
-
 def getClassEvictProbability():
+
+    print("Do tasks with a low scheduling class have a higher probability of being evicted?")
+    print("-------------------------------------")
+    
     EVICT = '2'
 
     start = time.time()
@@ -202,9 +196,11 @@ def getClassEvictProbability():
     appendToOutput("Class_Eviction_Probabiltiy" , time.time() - start  , eviction_probability)
 
 
-
-
 def getTasksRunningOnMachines():
+
+    print("In general, do tasks from the same job run on the same machine?")
+    print("-------------------------------------")
+
     start = time.time()
     job_id_index_task_events = schema.getFieldNoByContent("task_events" , "job ID")
     machine_id_index_task_events = schema.getFieldNoByContent("task_events" , "machine ID")
@@ -220,7 +216,11 @@ def getTasksRunningOnMachines():
     end = time.time() - start
     print(job_count.collect())
 
+
 def getTaskConsumption():
+    print("Are the tasks that request the more resources the one that consume the more resources?")
+    print("-------------------------------------")
+
     task_index_index_task_usage = schema.getFieldNoByContent("task_usage", "task index")
     job_id_index_task_usage = schema.getFieldNoByContent("task_usage", "job ID")
     max_cpu_usage_index_task_usage = schema.getFieldNoByContent("task_usage" , "maximum CPU rate")
@@ -238,6 +238,10 @@ def getTaskConsumption():
     # joined_data = task_request_details.join(task_usage_details)
     # print(joined_data.collect()[0:10])
 
+
+def getCorrelationPeakAndEvictions():
+    print("an we observe correlations between peaks of high resource consumption on some machines and task eviction events?")
+    print("-------------------------------------")
 
     
 
