@@ -268,7 +268,7 @@ def helper_getTaskConsumption(resourceName : str, resourceUsageIndex : int, reso
     plt.show()
 
 
-def getTaskConsumption():
+def getResourceUsagePerRequest():
     print("Are the tasks that request the more resources the one that consume the more resources?")
     print("-------------------------------------")
 
@@ -314,6 +314,6 @@ if __name__ == "__main__":
     # getSchedClassDistribution()
     # getClassEvictProbability()
     # getNumberOfMachinePerJobTasks()
-    getTaskConsumption()
+    getResourceUsagePerRequest()
     print(json.dumps(output))
     print("------------------- DONE -----------------");
