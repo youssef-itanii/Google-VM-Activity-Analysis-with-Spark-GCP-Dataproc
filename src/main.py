@@ -6,6 +6,7 @@ from schema import Schema
 import matplotlib.pyplot as plt
 import json
 import numpy as np
+import math
 
 
 def appendToOutput(key, time , value):
@@ -227,7 +228,7 @@ def getNumberOfMachinePerJobTasks():
     end = time.time() - start
     print(job_count.collect())
 
-def helper_getTaskConsumption(resourceName : str, resourceUsageIndex : int, resourceRequestIndex : int):
+def helper_getResourceUsagePerRequest(resourceName : str, resourceUsageIndex : int, resourceRequestIndex : int, showGraph : bool):
 
     task_events_task_index_index = schema.getFieldNoByContent("task_events", "task index")
     task_events_job_id_index = schema.getFieldNoByContent("task_events" , "job ID")
@@ -235,62 +236,59 @@ def helper_getTaskConsumption(resourceName : str, resourceUsageIndex : int, reso
     task_usage_task_index_index = schema.getFieldNoByContent("task_usage", "task index")
     task_usage_job_id_index = schema.getFieldNoByContent("task_usage", "job ID")
 
+    # filter and map ((job_id,task_id) , (requested_resource))
     filtered_task_events = task_events.filter(lambda e: e[task_events_job_id_index]!='' and e[task_events_task_index_index]!='' and e[resourceRequestIndex]!='')
     requested_resources_per_task = filtered_task_events.map(lambda e : ((e[task_events_job_id_index],e[task_events_task_index_index]),float(e[resourceRequestIndex])))
-    requested_resources_per_task = requested_resources_per_task.groupByKey().mapValues(lambda x : float(sum(x))/len(x))
+    
+    # aggregate and get average resources requested by task
+    # (job_id,task_id) -> avg_requested_resource
+    avg_requested_resources_per_task = requested_resources_per_task.aggregateByKey((0,0),lambda a,b: (a[0] + b, a[1] + 1),lambda a,b: (a[0] + b[0],a[1] + b[1]))
+    avg_requested_resources_per_task = avg_requested_resources_per_task.mapValues(lambda x: float(x[0])/x[1])
    
+    # filter and map ((job_id,task_id) , (used_resource))
     filtered_task_usage = task_usage.filter(lambda e: e[task_usage_job_id_index]!='' and e[task_usage_task_index_index]!='' and e[resourceUsageIndex]!='')
     used_resources_per_task = filtered_task_usage.map(lambda e : ((e[task_usage_job_id_index],e[task_usage_task_index_index]),float(e[resourceUsageIndex])))
-    used_resources_per_task = used_resources_per_task.groupByKey().mapValues(lambda x : float(sum(x))/len(x))
-
-    resource_per_task = requested_resources_per_task.join(used_resources_per_task)
     
-    resource_usage_per_request = resource_per_task.map(lambda x: (x[1][0],x[1][1])).groupByKey()
-
-    number_resource_usage_per_request = dict(resource_usage_per_request.mapValues(lambda x : len(x)).collect())
-    # TODO: Find average and std_dev 
-    # average_resource_usage_per_request = resource_usage_per_request.reduceByKey(lambda a,b:a+b).mapValues(lambda x: )
+    # aggregate and get average resources used by task
+    # (job_id,task_id) -> avg_used_resource
+    avg_used_resources_per_task = used_resources_per_task.aggregateByKey((0,0),lambda a,b: (a[0] + b, a[1] + 1),lambda a,b: (a[0] + b[0],a[1] + b[1]))
+    avg_used_resources_per_task = avg_used_resources_per_task.mapValues(lambda x: float(x[0])/x[1])
     
-    usage_stats_per_request = resource_usage_per_request.map(lambda x: (x[0], np.mean(x[1]), np.std(x[1]))).collect()
+    # (job_id,task_id) -> (avg_requested_resource, avg_used_resource)
+    resource_per_task = avg_requested_resources_per_task.join(avg_used_resources_per_task)
+    
+    # map (avg_requested_resource, avg_used_resource)
+    resource_usage_per_request = resource_per_task.map(lambda x: (x[1][0],x[1][1]))
 
-    print(usage_stats_per_request)
-    return
-    # Unpack results for plotting
-    values, averages, std_devs = zip(*usage_stats_per_request)
+    # calculate average and std_dev using variance = mean(x^2) - mean(x)^2
+    # avg_requested_resource -> (avg_used_resource,std_dev_used_resource)
+    stats_resource_usage_per_request = resource_usage_per_request.aggregateByKey((0,0,0),lambda a,b: (a[0] + b, a[1] + 1, a[2] + b*b),lambda a,b: (a[0] + b[0],a[1] + b[1],a[2] + b[2]))
+    stats_resource_usage_per_request = stats_resource_usage_per_request.mapValues(lambda x: (x[0]/x[1], math.sqrt(abs((x[2]/x[1]) - (x[0]/x[1])**2))))
+    
+    # sort and flatten key-val to tuple (avg_requested_resource, avg_used_resource, std_dev_used_resource) 
+    stats_resource_usage_per_request = stats_resource_usage_per_request.sortByKey().map(lambda x: (x[0],x[1][0],x[1][1])).collect()
+    
+    values, averages, std_devs = zip(*stats_resource_usage_per_request)
 
-    # Plotting
-    plt.figure(figsize=(8, 6))
-    plt.errorbar(values, averages, yerr=std_devs, fmt='o', capsize=5)
-    plt.xlabel('Values')
-    plt.ylabel('Average')
-    plt.title('Average and Standard Deviation for each Tuple')
-    plt.grid(True)
-    plt.show()
+    if showGraph:
+        # Plotting
+        plt.figure(figsize=(8, 6))
+        # TO plot with standard dev
+        #plt.errorbar(values, averages, yerr=std_devs, fmt='o', capsize=2, markersize=1)
+        plt.errorbar(values, averages, fmt='o', capsize=2, markersize=1)
+        plt.plot(values, values, linestyle='--', color='red')  # Plot y = x line
+        plt.xlabel(f'Requested {resourceName}')
+        plt.ylabel(f'Used {resourceName}')
+        plt.title(f'Variation of {resourceName} used compared to {resourceName} requested')
+        plt.grid(True)
+        plt.show()
 
 
 def getResourceUsagePerRequest():
     print("Are the tasks that request the more resources the one that consume the more resources?")
     print("-------------------------------------")
 
-    task_usage_cpu_index = schema.getFieldNoByContent("task_usage" , "CPU rate")
-    task_events_cpu_request_index = schema.getFieldNoByContent("task_events", "CPU request")
-    helper_getTaskConsumption("CPU", task_usage_cpu_index, task_events_cpu_request_index)
-    
-    task_usage_mem_index = schema.getFieldNoByContent("task_usage", "canonical memory usage")
-    task_events_mem_request_index = schema.getFieldNoByContent("task_events", "memory request")
-
-    task_usage_disk_index = schema.getFieldNoByContent("task_usage", "local disk space usage")
-    task_events_disk_request_index = schema.getFieldNoByContent("task_events", "disk space request")
-    
-
-
-
-
-def getCorrelationPeakAndEvictions():
-    print("an we observe correlations between peaks of high resource consumption on some machines and task eviction events?")
-    print("-------------------------------------")
-
-    
+    #TODO
 
 
 if __name__ == "__main__":
@@ -314,6 +312,7 @@ if __name__ == "__main__":
     # getSchedClassDistribution()
     # getClassEvictProbability()
     # getNumberOfMachinePerJobTasks()
-    getResourceUsagePerRequest()
+    # getResourceUsagePerRequest()
+    getCorrelationPeakAndEvictions()
     print(json.dumps(output))
     print("------------------- DONE -----------------");
