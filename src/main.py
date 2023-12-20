@@ -438,7 +438,56 @@ def getCorrelationPeakAndEvictions():
     machine_events_mem_available_index = schema.getFieldNoByContent("machine_events", "Memory")
     helper_getCorrelationPeakAndEvictions("Memory", task_usage_mem_index, machine_events_mem_available_index, True)
 
+# takes list of (timestamp,event_type,machine_id) and return for how much time it took for each fail and reschedule to
+# take place and if the machine changed or not
+def helper_getTimeUntilRescheduleAndIfMachineChanged(lst : list[tuple[int,str,str]]) -> list[tuple[int,int]]:
+    res = [] 
+    for i in range(len(lst) - 1):
+        if lst[i][1] != lst[i + 1][1]: # event_type_changed
+            machine_changed = 1 if lst[i][2] != lst[i + 1][2] else 0
+            res.append((lst[i + 1][0] - lst[i][0],machine_changed))
+    return res
+
+
+def getFailureRecovery():
+    print("How much time does it usually takes a task to be rescheduled after failure? Are they rescheduled on the same machine or not?")
+    print("-------------------------------------")
     
+    SCHEDULE = '1'
+    FAIL = '3'
+
+    job_id_index = schema.getFieldNoByContent("task_events" , "job ID") 
+    task_index_index = schema.getFieldNoByContent("task_events" , "task index")
+    timestamp_index = schema.getFieldNoByContent("task_events", "time")
+    event_type_index = schema.getFieldNoByContent("task_events", "event type")
+    machine_id_index = schema.getFieldNoByContent("task_events", "machine ID")
+
+    # filter task events
+    # Get ((job_id,task_index),(timestamp,event_type,machine_id))
+    filtered_task_events = task_events.filter(lambda e: e[job_id_index]!='' and e[task_index_index]!='' and e[timestamp_index]!='' and e[event_type_index]!='' and e[machine_id_index]!='')
+    filtered_task_events = filtered_task_events.map(lambda e: ((e[job_id_index],e[task_index_index]),(int(e[timestamp_index]),e[event_type_index],e[machine_id_index])))
+    
+    # filter schedule and fail events
+    schedule_and_fail_events = filtered_task_events.filter(lambda e: e[0][1]==SCHEDULE or e[0][1]==FAIL)
+    
+    # group by task and sort values by timestamp
+    # (job_id,task_index) -> (timestamp,event_type,machine_id)
+    schedule_and_fail_events_by_task = schedule_and_fail_events.groupByKey().mapValues(lambda x: sorted(x))
+
+    # Get ( time_till_reschedule, machine_changed = 0|1 )
+    time_till_reschedule_and_machine_changed = schedule_and_fail_events_by_task.flatMapValues(lambda x: helper_getTimeUntilRescheduleAndIfMachineChanged(x))
+
+    time_till_reschedule = time_till_reschedule_and_machine_changed.map(lambda x: x[1][0]).stats()
+    print(time_till_reschedule)
+
+    check_if_machine_changed = time_till_reschedule_and_machine_changed.map(lambda x: x[1][1])
+
+    check_if_machine_changed_count = check_if_machine_changed.count()
+    num_machine_changed = check_if_machine_changed.sum()
+    print(f'count = {check_if_machine_changed_count}')
+    print(f'machine_changed = {num_machine_changed}')
+    print(f'Percentage machine changed = {100*float(num_machine_changed)/check_if_machine_changed_count}%')
+
 
 
 if __name__ == "__main__":
@@ -463,6 +512,8 @@ if __name__ == "__main__":
     # getClassEvictProbability()
     # getNumberOfMachinePerJobTasks()
     # getResourceUsagePerRequest()
-    getCorrelationPeakAndEvictions()
+    # getCorrelationPeakAndEvictions()
+    getFailureRecovery()
+    
     print(json.dumps(output))
     print("------------------- DONE -----------------");
