@@ -2,7 +2,7 @@ import sys
 from util import *
 from pyspark import SparkContext
 import time
-from schema import Schema
+from schema_1 import Schema
 import matplotlib.pyplot as plt
 import json
 import numpy as np
@@ -493,7 +493,7 @@ def getFailureRecovery():
 if __name__ == "__main__":
     output = {}
     initiateSpark()
-    on_gcp = False
+    on_gcp = True
     file_path = "../data/" if not on_gcp else "gs://large-data/data"
     schema = Schema(sc , file_path+"/schema.csv")
 
@@ -506,14 +506,14 @@ if __name__ == "__main__":
 
 
     print("\n------------------- START -----------------\n");
-    # getCPUDistribution()
-    # computePowerLost()
-    # getSchedClassDistribution()
-    # getClassEvictProbability()
-    # getNumberOfMachinePerJobTasks()
+    # getCPUDistribution() X
+    # computePowerLost() X
+    # getSchedClassDistribution() X
+    # getClassEvictProbability() X
+    # getNumberOfMachinePerJobTasks() X
     # getResourceUsagePerRequest()
     # getCorrelationPeakAndEvictions()
-    getFailureRecovery()
+    # getFailureRecovery()
     
     print(json.dumps(output))
     print("------------------- DONE -----------------");

@@ -18,3 +18,7 @@ def plotDistribution(data , xlabel , ylabel, title):
 	plt.ylabel(ylabel)
 	plt.title(title)
 	plt.show()
+
+
+def generateJson(key , value):
+	return {key: value}
