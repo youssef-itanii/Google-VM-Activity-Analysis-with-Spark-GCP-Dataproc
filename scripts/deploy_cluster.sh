@@ -27,15 +27,15 @@ Example: Usage: $0 -r <region> -z <zone> -n <cluster-name> -w <num-workers> -c
 fi
 
 
-# Create the Dataproc cluster
 gcloud dataproc clusters create $CLUSTER_NAME \
     --region=$REGION \
     --zone=$ZONE \
     --master-machine-type=n1-standard-4 \
-    --master-boot-disk-size=500 \
-    --num-workers=$NUM_WORKERS \
+    --master-boot-disk-size=100 \
+    --num-workers=5 \
     --worker-machine-type=n1-standard-4 \
-    --worker-boot-disk-size=500
+    --worker-boot-disk-size=100 \
+    --image-version=1.5-debian10
 
 # Optional: Create a Google Cloud Storage bucket
 if [ "$CREATE_BUCKET" = true ]; then

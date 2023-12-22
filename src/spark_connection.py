@@ -3,7 +3,7 @@ from pyspark import SparkContext
 
 class SparkConnection:
     def __init__(self , workers = "local[*]"):
-        self.sc = SparkContext(workers)
+        self.sc = SparkContext()
         self.sc.setLogLevel("ERROR")
    
     def loadData(self, file_path):

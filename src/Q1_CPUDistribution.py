@@ -5,7 +5,7 @@ import time
 import util
 
 def getCPUDistribution(conn , schema , file_path):
-    machine_events = conn.loadData(file_path+"/machine_events/part-00000-of-00001.csv")
+    machine_events = conn.loadData(file_path+"/machine_events/*.csv")
     
     print("What is the distribution of the machines according to their CPU capacity?")
     print("-------------------------------------")

@@ -4,7 +4,6 @@ import time
 
 
 def getSchedClassDistribution(conn , schema , task_events , job_events):
-
     print(" What is the distribution of the number of jobs/tasks per scheduling class?")
     print("-------------------------------------")
 
@@ -15,7 +14,9 @@ def getSchedClassDistribution(conn , schema , task_events , job_events):
     sched_class_index_job_events = schema.getFieldNoByContent("job_events" , "scheduling class")
     
     task_distribution = task_events.map(lambda x: (x[sched_class_index_task_events] , 1)).reduceByKey(lambda x,y:x+y).collect()
+
     job_distribution = job_events.map(lambda x: (x[sched_class_index_job_events] , 1)).reduceByKey(lambda x,y:x+y).collect()
+
 
     task_distribution.sort(key=lambda x: x[0])
     job_distribution.sort(key=lambda x: x[0])

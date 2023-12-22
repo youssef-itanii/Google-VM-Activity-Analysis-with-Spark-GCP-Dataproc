@@ -2,7 +2,7 @@
 
 # Set the name of the source and destination buckets
 SOURCE_BUCKET=gs://clusterdata-2011-2
-DESTINATION_BUCKET=gs://large-data-spark
+DESTINATION_BUCKET=gs://large-data/data
 
 # Directory to store the files temporarily
 LOCAL_STORAGE_PATH="temp"

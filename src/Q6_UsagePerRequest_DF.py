@@ -1,6 +1,5 @@
 import math
 import time
-from matplotlib import pyplot as plt
 from pyspark.sql import SparkSession
 from schema import Schema
 from spark_connection import SparkConnection
@@ -12,7 +11,7 @@ def convertToFloat(val):
     except ValueError:
         return None
 
-def helper_getResourceUsagePerRequest(conn, resourceName, resourceUsageIndex, resourceRequestIndex, task_events_rdd, task_usage_rdd):
+def helper_getResourceUsagePerRequest(spark, resourceName, resourceUsageIndex, resourceRequestIndex, task_events_rdd, task_usage_rdd):
     
     task_usage_task_index_index = schema.getFieldNoByContent("task_usage", "task index")
     task_usage_job_id_index = schema.getFieldNoByContent("task_usage", "job ID")
@@ -20,8 +19,8 @@ def helper_getResourceUsagePerRequest(conn, resourceName, resourceUsageIndex, re
     task_events_job_id_index = schema.getFieldNoByContent("task_events" , "job ID")
    
     #Filter and map ((job_id,task_id) , (requested_resource)) as dataframes
-    task_events = conn.createDataFrame(task_events_rdd.map(lambda e: Row(job_id=e[task_events_job_id_index], task_id=e[task_events_task_index_index], requested_resource=convertToFloat(e[resourceRequestIndex]))))
-    task_usage = conn.createDataFrame(task_usage_rdd.map(lambda e: Row(job_id=e[task_usage_job_id_index], task_id=e[task_usage_task_index_index], used_resource=convertToFloat(e[resourceUsageIndex]))))
+    task_events = spark.createDataFrame(task_events_rdd.map(lambda e: Row(job_id=e[task_events_job_id_index], task_id=e[task_events_task_index_index], requested_resource=convertToFloat(e[resourceRequestIndex]))))
+    task_usage = spark.createDataFrame(task_usage_rdd.map(lambda e: Row(job_id=e[task_usage_job_id_index], task_id=e[task_usage_task_index_index], used_resource=convertToFloat(e[resourceUsageIndex]))))
 
     #Compute averages and join
     avg_requested_resources = task_events.groupBy("job_id", "task_id") \
@@ -58,6 +57,8 @@ def helper_getResourceUsagePerRequest(conn, resourceName, resourceUsageIndex, re
     values, averages, std_devs = zip(*[(row['avg_requested_resource'], row['mean_used_resource'], row['std_dev_used_resource']) for row in plot_data])
 
     if not is_remote:
+        from matplotlib import pyplot as plt
+
         plt.figure(figsize=(8, 6))
         # plt.errorbar(values, averages, yerr=std_devs, fmt='o', capsize=2, markersize=1)
         plt.errorbar(values, averages, fmt='o', capsize=2, markersize=1)
@@ -89,7 +90,7 @@ def getResourceUsagePerRequest(conn, schema, task_usage, task_events, is_remote)
     print(f"TIME: {time.time() - start}")
 
 def run(conn, schema, file_path, is_remote):
-    conn = SparkSession.builder.appName("ResourceUsageOptimization").getOrCreate()
+    spark = SparkSession.builder.appName("ResourceUsageOptimization").getOrCreate()
 
     task_events = conn.loadData(file_path + "/task_events/*.csv")
     task_usage = conn.loadData(file_path + "/task_usage/*.csv")
@@ -109,12 +110,12 @@ def run(conn, schema, file_path, is_remote):
     filtered_task_events.cache()
 
 
-    getResourceUsagePerRequest(conn, schema, filtered_task_usage, filtered_task_events, is_remote)
-    conn.stop()
+    getResourceUsagePerRequest(spark, schema, filtered_task_usage, filtered_task_events, is_remote)
+    spark.stop()
 
 if __name__ == "__main__":
-    is_remote = False
-    conn = SparkConnection("local[8]")
+    is_remote = True
+    conn = SparkConnection()
     sc = conn.sc
     file_path = "../data/" if not is_remote else "gs://large-data/data"
     schema = Schema(conn, file_path + "/schema.csv")
