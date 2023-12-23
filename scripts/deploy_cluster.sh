@@ -8,7 +8,6 @@ while getopts ":r:z:n:w:c" opt; do
     r) REGION=$OPTARG ;;
     z) ZONE=$OPTARG ;;
     n) CLUSTER_NAME=$OPTARG ;;
-    w) NUM_WORKERS=$OPTARG ;;
     c) CREATE_BUCKET=true ;;
     \?) echo "Invalid option -$OPTARG" >&2
         exit 1 ;;
@@ -17,10 +16,10 @@ done
 
 # Check if required arguments are set
 if [ -z "$REGION" ] || [ -z "$ZONE" ] || [ -z "$CLUSTER_NAME" ] || [ -z "$NUM_WORKERS" ]; then
-    echo "Usage: $0 -r <region> -z <zone> -n <cluster-name> -w <num-workers> 
+    echo "Usage: $0 -r <region> -z <zone> -n <cluster-name>
 
 NOTE: If you want to create a new bucket, use the -c flag and a bucket will be created with the name 'large-data'.
-Example: Usage: $0 -r <region> -z <zone> -n <cluster-name> -w <num-workers> -c 
+Example: Usage: $0 -r <region> -z <zone> -n <cluster-name> -c 
 =============================================================================================================
 "
     exit 1
