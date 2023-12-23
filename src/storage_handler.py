@@ -9,8 +9,8 @@ class StorageHandler:
         self.__storage_client = storage.Client()
         self.__bucket = self.__storage_client.get_bucket(self.bucket_name)
     
-    def write_json_to_gcs(self ,  data):
-        file_name = "results/results.json",
+    def store(self ,  data):
+        file_name = "results/results.json"
         blob = self.__bucket.blob(file_name)
 
         if blob.exists():
@@ -27,5 +27,5 @@ class StorageHandler:
             final_data = data
 
         # Upload the updated data
-        blob.upload_from_string(json.dumps(final_data), content_type='application/json')
+        blob.upload_from_string(json.dumps(final_data , indent=4), content_type='application/json' )
         print(f"Data written to {file_name} in bucket {self.bucket_name}")

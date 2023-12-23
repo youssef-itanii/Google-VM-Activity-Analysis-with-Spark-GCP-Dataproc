@@ -1,2 +1,2 @@
 #!/bin/bash
-gsutil cp ../src/*.py  gs://large-data/src/
+gsutil cp ../scripts/*.sh  gs://large-data/scripts/

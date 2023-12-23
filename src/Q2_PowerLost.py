@@ -1,9 +1,12 @@
 import json
+import sys
 from schema import Schema
 from spark_connection import SparkConnection
 import time
+from storage_handler import StorageHandler
 import util
 
+@util.execTime
 def computePowerLost(conn , schema , file_path):
     machine_events = conn.loadData(file_path+"/machine_events/part-00000-of-00001.csv")
 
@@ -45,6 +48,8 @@ def computePowerLost(conn , schema , file_path):
     power_loss = 100 * computational_loss / total_cpu
     
     print(f"Percentage of power lost: {power_loss}%")
+    storage_conn.store({"Q2_compute_power_lost": power_loss})
+
     print("=========================================================================================\n")
 
 
@@ -112,10 +117,14 @@ def run(conn, schema, file_path):
     computePowerLost(conn , schema , file_path)
 
 if __name__ == "__main__":
-    is_remote = True
+    is_remote = False
+    try:
+        is_remote = True if sys.argv[1] == '1' else False
+    except IndexError:
+        is_remote = False
     conn = SparkConnection()
     sc = conn.sc
-    file_path = "../data/" if not is_remote else "gs://large-data/data"
+    storage_conn = StorageHandler()
+    file_path = "../data/" if not is_remote else StorageHandler.path_to_data
     schema = Schema(conn , file_path+"/schema.csv")
-
     run(conn, schema, file_path)

@@ -16,11 +16,12 @@ else
     exit 1
 fi
 
-IS_REMOTE=1
+IS_REMOTE="1"
 
 SRC_PATH="gs://large-data/src"
-gcloud dataproc jobs submit pyspark gs://large-data/src/$FILE_NAME \
-    --"$IS_REMOTE" \
+gcloud dataproc jobs submit pyspark $SRC_PATH/$FILE_NAME \
     --cluster=$CLUSTER_NAME \
     --region=$REGION \
-    --py-files $SRC_PATH/util.py,$SRC_PATH/schema.py,$SRC_PATH/spark_connection.py,$SRC_PATH/storage_handler.py
+    --py-files $SRC_PATH/util.py,$SRC_PATH/schema.py,$SRC_PATH/spark_connection.py,$SRC_PATH/storage_handler.py \
+    --packages 'google-cloud-storage' \
+    -- "$IS_REMOTE"

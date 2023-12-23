@@ -15,7 +15,7 @@ while getopts ":r:z:n:w:c" opt; do
 done
 
 # Check if required arguments are set
-if [ -z "$REGION" ] || [ -z "$ZONE" ] || [ -z "$CLUSTER_NAME" ] || [ -z "$NUM_WORKERS" ]; then
+if [ -z "$REGION" ] || [ -z "$ZONE" ] || [ -z "$CLUSTER_NAME" ] ; then
     echo "Usage: $0 -r <region> -z <zone> -n <cluster-name>
 
 NOTE: If you want to create a new bucket, use the -c flag and a bucket will be created with the name 'large-data'.
@@ -34,7 +34,8 @@ gcloud dataproc clusters create $CLUSTER_NAME \
     --num-workers=5 \
     --worker-machine-type=n1-standard-4 \
     --worker-boot-disk-size=100 \
-    --image-version=1.5-debian10
+    --image-version=1.5-debian10 \
+    --initialization-actions gs://large-data/scripts/install-gcp-storage.sh
 
 # Optional: Create a Google Cloud Storage bucket
 if [ "$CREATE_BUCKET" = true ]; then

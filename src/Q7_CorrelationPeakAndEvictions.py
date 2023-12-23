@@ -1,5 +1,5 @@
 from collections import defaultdict
-import time
+import util
 from matplotlib import pyplot as plt
 from schema import Schema
 from spark_connection import SparkConnection
@@ -8,7 +8,6 @@ from spark_connection import SparkConnection
 machine_events = None
 task_usage = None
 task_events = None
-
 
 def getEvictionAndResourceUsagePercentageInIntervals(machine_resouce_value: float, intervals_with_usage: list[tuple[int, int, float]], evictions: list[int]) -> list[tuple[float,int]]: 
     result = []
@@ -137,11 +136,10 @@ def helper_getCorrelationPeakAndEvictions(resource_name : str, task_usage_resour
         plt.legend()
         plt.show()
 
-
+@util.execTime
 def getCorrelationPeakAndEvictions(schema):
     print("an we observe correlations between peaks of high resource consumption on some machines and task eviction events?")
     print("-------------------------------------")
-    start = time.time()
 
     task_usage_cpu_index = schema.getFieldNoByContent("task_usage" , "CPU rate")
     machine_events_cpu_available_index = schema.getFieldNoByContent("machine_events", "CPUs")
@@ -150,7 +148,6 @@ def getCorrelationPeakAndEvictions(schema):
     task_usage_mem_index = schema.getFieldNoByContent("task_usage", "canonical memory usage")
     machine_events_mem_available_index = schema.getFieldNoByContent("machine_events", "Memory")
     helper_getCorrelationPeakAndEvictions("Memory", task_usage_mem_index, machine_events_mem_available_index, False)
-    print(f"TIME {time.time() - start}")
 
 def run(conn, schema, file_path):
     global task_usage , machine_events , task_events

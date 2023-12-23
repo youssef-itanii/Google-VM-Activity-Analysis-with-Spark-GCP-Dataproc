@@ -21,7 +21,7 @@ def getCPUDistribution(conn , schema , file_path):
     res = machine_cpu_distribution.mapValues(lambda x: list(x)[0])
     cpu_distribution = res.map(lambda x: (x[1] , 1)).reduceByKey(lambda x,y:x+y).collect()
 
-    storage_conn.write_json_to_gcs( util.generateJson("cpu_distribution", cpu_distribution) , True)
+    storage_conn.store({"Q1_cpu_distribution": cpu_distribution})
 
     
     print("=========================================================================================\n")
@@ -30,7 +30,7 @@ def run(conn, schema, file_path):
     getCPUDistribution(conn , schema , file_path)
 
 if __name__ == "__main__":
-    is_remote = None
+    is_remote = False
     try:
         is_remote = True if sys.argv[1] == '1' else False
     except IndexError:

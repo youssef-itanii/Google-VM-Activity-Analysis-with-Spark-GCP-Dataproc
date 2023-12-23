@@ -1,4 +1,6 @@
-import time
+import sys
+from storage_handler import StorageHandler
+import util
 from schema import Schema
 from spark_connection import SparkConnection
 
@@ -10,7 +12,7 @@ def helper_getTimeUntilRescheduleAndIfMachineChanged(lst : list[tuple[int,str,st
             res.append((lst[i + 1][0] - lst[i][0],machine_changed))
     return res
 
-
+@util.execTime
 def getFailureRecovery(schema , task_events):
     print("How much time does it usually takes a task to be rescheduled after failure? Are they rescheduled on the same machine or not?")
     print("-------------------------------------")
@@ -48,7 +50,7 @@ def getFailureRecovery(schema , task_events):
     num_machine_changed = check_if_machine_changed.sum()
     print(f'count = {check_if_machine_changed_count}')
     print(f'machine_changed = {num_machine_changed}')
-    print(f'Percentage machine changed = {100*float(num_machine_changed)/check_if_machine_changed_count}%')
+    storage_conn.store({"Q8_percentage_machine_changed":100*float(num_machine_changed)/check_if_machine_changed_count})
 
 def run(conn, schema, file_path):
     task_events = conn.loadData(file_path+"/task_events/*.csv")
@@ -56,9 +58,13 @@ def run(conn, schema, file_path):
 
 if __name__ == "__main__":
     is_remote = False
+    try:
+        is_remote = True if sys.argv[1] == '1' else False
+    except IndexError:
+        is_remote = False
     conn = SparkConnection()
     sc = conn.sc
-    file_path = "../data/" if not is_remote else "gs://large-data/data"
+    storage_conn = StorageHandler()
+    file_path = "../data/" if not is_remote else StorageHandler.path_to_data
     schema = Schema(conn , file_path+"/schema.csv")
-
     run(conn, schema, file_path)

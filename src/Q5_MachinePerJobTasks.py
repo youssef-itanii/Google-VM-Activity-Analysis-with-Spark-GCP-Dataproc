@@ -1,7 +1,9 @@
-import time
+import sys
+from storage_handler import StorageHandler
+import util
 from schema import Schema
-
 from spark_connection import SparkConnection
+
 def getNumberOfMachinePerJobTasks(schema, task_events):
 
     print("In general, do tasks from the same job run on the same machine?")
@@ -9,7 +11,6 @@ def getNumberOfMachinePerJobTasks(schema, task_events):
 
     SCHEDULE_EVENT = '1'
 
-    start = time.time()
     job_id_index = schema.getFieldNoByContent("task_events" , "job ID")
     machine_id_index = schema.getFieldNoByContent("task_events" , "machine ID")
     event_type_index = schema.getFieldNoByContent("task_events" , "event type")
@@ -29,18 +30,22 @@ def getNumberOfMachinePerJobTasks(schema, task_events):
     #Get how many jobs are each distributed to X machines. 
     #Example (1,5) 5 jobs are running on 1 machine. (X,Y) Y jobs are each running on X machines
     job_count = number_of_machines_per_job.map(lambda x: (x[1] , 1)).reduceByKey(lambda x,y:x+y).sortBy(lambda x: x)
-    end = time.time() - start
-    print(job_count.collect())
+    storage_conn.store({"Q5_job_distribution": job_count.collect()})
 
 def run(conn, schema, file_path):
     task_events = conn.loadData(file_path+"/task_events/*.csv")
     getNumberOfMachinePerJobTasks(schema , task_events)
 
 if __name__ == "__main__":
-    is_remote = True
+    is_remote = False
+    try:
+        is_remote = True if sys.argv[1] == '1' else False
+    except IndexError:
+        is_remote = False
     conn = SparkConnection()
     sc = conn.sc
-    file_path = "../data/" if not is_remote else "gs://large-data/data"
+    storage_conn = StorageHandler()
+    file_path = "../data/" if not is_remote else StorageHandler.path_to_data
     schema = Schema(conn , file_path+"/schema.csv")
-
     run(conn, schema, file_path)
+
