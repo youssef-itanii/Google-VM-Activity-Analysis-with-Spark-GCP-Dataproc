@@ -35,7 +35,10 @@ gcloud dataproc clusters create $CLUSTER_NAME \
     --worker-machine-type=n1-standard-4 \
     --worker-boot-disk-size=100 \
     --image-version=1.5-debian10 \
-    --initialization-actions gs://large-data/scripts/install-gcp-storage.sh
+    --metadata 'PIP_PACKAGES=google-cloud-storage' \
+    --initialization-actions gs://goog-dataproc-initialization-actions-$REGION/python/pip-install.sh \
+
+
 
 # Optional: Create a Google Cloud Storage bucket
 if [ "$CREATE_BUCKET" = true ]; then

@@ -23,5 +23,4 @@ gcloud dataproc jobs submit pyspark $SRC_PATH/$FILE_NAME \
     --cluster=$CLUSTER_NAME \
     --region=$REGION \
     --py-files $SRC_PATH/util.py,$SRC_PATH/schema.py,$SRC_PATH/spark_connection.py,$SRC_PATH/storage_handler.py \
-    --packages 'google-cloud-storage' \
     -- "$IS_REMOTE"
