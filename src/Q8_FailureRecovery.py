@@ -4,7 +4,8 @@ import util
 from schema import Schema
 from spark_connection import SparkConnection
 
-def helper_getTimeUntilRescheduleAndIfMachineChanged(lst : list[tuple[int,str,str]]) -> list[tuple[int,int]]:
+def helper_getTimeUntilRescheduleAndIfMachineChanged(lst):
+    #(lst : list[tuple[int,str,str]]) -> list[tuple[int,int]]
     res = [] 
     for i in range(len(lst) - 1):
         if lst[i][1] != lst[i + 1][1]: # event_type_changed
