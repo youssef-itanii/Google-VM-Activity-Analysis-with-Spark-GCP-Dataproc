@@ -1,0 +1,6 @@
+[
+    {"workerCount": 2, "executionTime": 354.5553},
+    {"workerCount": 3, "executionTime": 250.0019},
+    {"workerCount": 4, "executionTime": 199.4315},
+    {"workerCount": 5, "executionTime": 166.5440}
+]
