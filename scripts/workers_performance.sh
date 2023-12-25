@@ -36,7 +36,7 @@ mkdir -p "$RESULTS_DIR"
 # Initialize JSON output
 echo "[" > "$OUTPUT_FILE"
 
-for i in {5..5}
+for i in {2..5}
 do
     echo "Updating cluster to $i workers in region $REGION"
     gcloud dataproc clusters update "$CLUSTER_NAME" --num-workers=$i --region="$REGION"
