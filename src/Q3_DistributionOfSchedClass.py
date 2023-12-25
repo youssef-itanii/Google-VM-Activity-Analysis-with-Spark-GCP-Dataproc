@@ -19,8 +19,8 @@ def getSchedClassDistribution(conn , schema , task_events , job_events):
 
     task_distribution.sort(key=lambda x: x[0])
     job_distribution.sort(key=lambda x: x[0])
-
-    storage_conn.store({"Q3_Task_Job_Dist" : {"Task_distribution" :task_distribution , "Job_distrubtion": job_distribution}})
+    ext = "_local" if not is_remote else ""
+    storage_conn.store({"Q3_Task_Job_Dist"+ext : {"Task_distribution" :task_distribution , "Job_distrubtion": job_distribution}})
 
 
 

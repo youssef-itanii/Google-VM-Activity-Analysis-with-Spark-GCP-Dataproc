@@ -1,3 +1,7 @@
-*.csv
+/data/job_events/*
+/data/machine_events/*
+/data/task_events/*
+/data/task_usage/*
+
 src/__pycache__
 scripts/cluster_config.txt

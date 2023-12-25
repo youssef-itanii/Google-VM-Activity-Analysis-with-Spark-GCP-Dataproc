@@ -4,6 +4,7 @@ import util
 from schema import Schema
 from spark_connection import SparkConnection
 
+@util.execTime
 def getNumberOfMachinePerJobTasks(schema, task_events):
 
     print("In general, do tasks from the same job run on the same machine?")
