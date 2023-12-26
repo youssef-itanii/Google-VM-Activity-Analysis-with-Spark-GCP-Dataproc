@@ -1,8 +1,4 @@
 #!/bin/bash
-
-# Define the file to be processed and other variables
-
-#!/bin/bash
 if [ "$#" -ne 1]; then
     echo "Usage: $0 <file-name> 
     [EXCLUDE .py EXTENSION]"
@@ -14,7 +10,6 @@ FILE_TO_PROCESS=$1
 RESULTS_DIR="../results"
 CONFIG_FILE="cluster_config.txt"
 
-# Read the configuration file
 if [ -f "$CONFIG_FILE" ]; then
     source "$CONFIG_FILE"
 else
@@ -30,10 +25,8 @@ fi
 
 OUTPUT_FILE="$RESULTS_DIR/${FILE_TO_PROCESS}_execution_times.json"
 
-# Create results directory if it doesn't exist
 mkdir -p "$RESULTS_DIR"
 
-# Initialize JSON output
 echo "[" > "$OUTPUT_FILE"
 
 for i in {2..5}
@@ -41,7 +34,6 @@ do
     echo "Updating cluster to $i workers in region $REGION"
     gcloud dataproc clusters update "$CLUSTER_NAME" --num-workers=$i --region="$REGION"
 
-    # Check for any error in cluster update
     if [ $? -ne 0 ]; then
         echo "Failed to update the cluster. Exiting."
         exit 1
@@ -50,7 +42,6 @@ do
     # Submit the job and capture its output
     JOB_OUTPUT=$(./submit_job.sh "$FILE_TO_PROCESS".py)
 
-    # Check for any error in job submission
     if [ $? -ne 0 ]; then
         echo "Failed to submit the job. Exiting."
         exit 1
@@ -58,7 +49,6 @@ do
 
     EXECUTION_TIME=$(echo "$JOB_OUTPUT" | grep "executed in" | awk '{print $3}')
 
-    # Append the execution time and worker count to the JSON file
     if [ -n "$EXECUTION_TIME" ]; then
         echo "{\"workerCount\": $i, \"executionTime\": $EXECUTION_TIME}\n" >> "$OUTPUT_FILE"
     else
@@ -72,7 +62,6 @@ do
 
 done
 
-# Close the JSON array
 echo "]" >> "$OUTPUT_FILE"
 
 echo "Process completed. Results stored in $OUTPUT_FILE."
