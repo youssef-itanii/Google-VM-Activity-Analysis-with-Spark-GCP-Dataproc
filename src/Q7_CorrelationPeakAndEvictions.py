@@ -1,6 +1,7 @@
 from collections import defaultdict
+import sys
+from storage_handler import StorageHandler
 import util
-from matplotlib import pyplot as plt
 from schema import Schema
 from spark_connection import SparkConnection
 
@@ -9,7 +10,8 @@ machine_events = None
 task_usage = None
 task_events = None
 
-def getEvictionAndResourceUsagePercentageInIntervals(machine_resouce_value: float, intervals_with_usage: list[tuple[int, int, float]], evictions: list[int]) -> list[tuple[float,int]]: 
+def getEvictionAndResourceUsagePercentageInIntervals(machine_resouce_value: float, intervals_with_usage, evictions): 
+    #def getEvictionAndResourceUsagePercentageInIntervals(machine_resouce_value: float, intervals_with_usage: list[tuple[int, int, float]], evictions: list[int]) -> list[tuple[float,int]]: 
     result = []
     evictions_pointer = 0
     
@@ -115,26 +117,34 @@ def helper_getCorrelationPeakAndEvictions(resource_name : str, task_usage_resour
     # Get (percentage_resource_usage, number_of_evictions)
     evictions_per_resource_usage_percentage = percent_resouce_usage_and_evictions.map(lambda x: (round(x[0],3),x[1])).reduceByKey(lambda a,b: a+b).collect()
 
-    if show_graph:
-        
-        sorted_data = sorted(evictions_per_resource_usage_percentage)
-        resource_percent_usage, evictions = zip(*sorted_data)
+    sorted_data = sorted(evictions_per_resource_usage_percentage)
+    resource_percent_usage, evictions = zip(*sorted_data)
 
-        # Calculate cumulative frequency
-        cumulative_freq = [evictions[0]]
-        for i in range(1, len(evictions)):
+    # Calculate cumulative frequency
+    cumulative_freq = [evictions[0]]
+    for i in range(1, len(evictions)):
             cumulative_freq.append(cumulative_freq[i-1] + evictions[i])
-
-        # Plotting the increasing cumulative frequency graph
-        plt.plot(resource_percent_usage, cumulative_freq, marker='o',markersize=1, label='Cumulative Frequency')
+    return resource_percent_usage, cumulative_freq
+    # if show_graph:
         
-        # plt.plot([point[0] for point in sorted_data], [point[1] for point in sorted_data], marker='o', markersize=1)
-        plt.xlabel(f'{resource_name} usage percentage')
-        plt.ylabel('Cumulative evictions')
-        plt.title('Increasing Cumulative Evictions Plot')
-        plt.grid(True)
-        plt.legend()
-        plt.show()
+    #     sorted_data = sorted(evictions_per_resource_usage_percentage)
+    #     resource_percent_usage, evictions = zip(*sorted_data)
+
+    #     # Calculate cumulative frequency
+    #     cumulative_freq = [evictions[0]]
+    #     for i in range(1, len(evictions)):
+    #         cumulative_freq.append(cumulative_freq[i-1] + evictions[i])
+
+    #     # Plotting the increasing cumulative frequency graph
+    #     plt.plot(resource_percent_usage, cumulative_freq, marker='o',markersize=1, label='Cumulative Frequency')
+        
+    #     # plt.plot([point[0] for point in sorted_data], [point[1] for point in sorted_data], marker='o', markersize=1)
+    #     plt.xlabel(f'{resource_name} usage percentage')
+    #     plt.ylabel('Cumulative evictions')
+    #     plt.title('Increasing Cumulative Evictions Plot')
+    #     plt.grid(True)
+    #     plt.legend()
+    #     plt.show()
 
 @util.execTime
 def getCorrelationPeakAndEvictions(schema):
@@ -143,24 +153,37 @@ def getCorrelationPeakAndEvictions(schema):
 
     task_usage_cpu_index = schema.getFieldNoByContent("task_usage" , "CPU rate")
     machine_events_cpu_available_index = schema.getFieldNoByContent("machine_events", "CPUs")
-    helper_getCorrelationPeakAndEvictions("CPU", task_usage_cpu_index, machine_events_cpu_available_index, False)
-    
+    resource_percent_usage_cpu, cumulative_freq_cpu = helper_getCorrelationPeakAndEvictions("CPU", task_usage_cpu_index, machine_events_cpu_available_index, False)
+    data_cpu = {"resource_percent_usage":resource_percent_usage_cpu , "cumulative_freq":cumulative_freq_cpu}
+
     task_usage_mem_index = schema.getFieldNoByContent("task_usage", "canonical memory usage")
     machine_events_mem_available_index = schema.getFieldNoByContent("machine_events", "Memory")
-    helper_getCorrelationPeakAndEvictions("Memory", task_usage_mem_index, machine_events_mem_available_index, False)
+    resource_percent_usage_mem, cumulative_freq_mem = helper_getCorrelationPeakAndEvictions("Memory", task_usage_mem_index, machine_events_mem_available_index, False)
+    data_mem = {"resource_percent_usage":resource_percent_usage_mem , "cumulative_freq":cumulative_freq_mem}
+    data = {"cpu": data_cpu , "mem": data_mem}
+    storage_conn.store({"Q7_CorrelationPeakAndEvictions" : data})
+    print("Done")
+
+
+
 
 def run(conn, schema, file_path):
     global task_usage , machine_events , task_events
     task_events = conn.loadData(file_path+"/task_events/*.csv")
     machine_events = conn.loadData(file_path+"/machine_events/*.csv")
     task_usage = conn.loadData(file_path+"/task_usage/*.csv")
+    task_usage.cache()
     getCorrelationPeakAndEvictions(schema)
 
 if __name__ == "__main__":
     is_remote = False
+    try:
+        is_remote = True if sys.argv[1] == '1' else False
+    except IndexError:
+        is_remote = False
     conn = SparkConnection()
     sc = conn.sc
-    file_path = "../data/" if not is_remote else "gs://large-data/data"
+    storage_conn = StorageHandler()
+    file_path = "../data/" if not is_remote else StorageHandler.path_to_data
     schema = Schema(conn , file_path+"/schema.csv")
-
-    run(conn, schema, file_path)
+    run(conn, schema, file_path )

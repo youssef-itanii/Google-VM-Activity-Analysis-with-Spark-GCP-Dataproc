@@ -1,6 +1,7 @@
 import math
 import sys
 import time
+import util
 from pyspark.sql import SparkSession
 from schema import Schema
 from spark_connection import SparkConnection
@@ -57,8 +58,8 @@ def helper_getResourceUsagePerRequest(spark, resourceName, resourceUsageIndex, r
 
     plot_data = stats.collect()
     values, averages, std_devs = zip(*[(row['avg_requested_resource'], row['mean_used_resource'], row['std_dev_used_resource']) for row in plot_data])
-    print(values)
-    print(averages)
+    return values,averages,std_devs
+
     # if not is_remote:
     #     from matplotlib import pyplot as plt
 
@@ -73,24 +74,31 @@ def helper_getResourceUsagePerRequest(spark, resourceName, resourceUsageIndex, r
     #     plt.grid(True)
     #     plt.show()
 
+@util.execTime
 def getResourceUsagePerRequest(conn, schema, task_usage, task_events, is_remote):
+    #Function 'getResourceUsagePerRequest' executed in 2329.2628 seconds
     print("Are the tasks that request more resources the ones that consume more resources?")
     print("-------------------------------------")
-    start = time.time()
 
     task_usage_cpu_index = schema.getFieldNoByContent("task_usage" , "CPU rate")
     task_events_cpu_request_index = schema.getFieldNoByContent("task_events", "CPU request")
-    helper_getResourceUsagePerRequest(conn, "CPU", task_usage_cpu_index, task_events_cpu_request_index, task_events, task_usage)
-
+    values_cpu ,averages_cpu ,std_devs_cpu = helper_getResourceUsagePerRequest(conn, "CPU", task_usage_cpu_index, task_events_cpu_request_index, task_events, task_usage)
+    data_cpu = {"values" : values_cpu, "avg": averages_cpu, "std": std_devs_cpu}
+    print("CPU DONE")
     task_usage_mem_index = schema.getFieldNoByContent("task_usage", "canonical memory usage")
     task_events_mem_request_index = schema.getFieldNoByContent("task_events", "memory request")
-    helper_getResourceUsagePerRequest(conn , "Memory", task_usage_mem_index, task_events_mem_request_index,task_events, task_usage)
+    values_mem  ,averages_mem  ,std_devs_mem =helper_getResourceUsagePerRequest(conn , "Memory", task_usage_mem_index, task_events_mem_request_index,task_events, task_usage)
+    data_mem = {"values" : values_mem, "avg": averages_mem, "std": std_devs_mem}
+    print("MEM DONE")
 
     task_usage_disk_index = schema.getFieldNoByContent("task_usage", "local disk space usage")
     task_events_disk_request_index = schema.getFieldNoByContent("task_events", "disk space request")
-    helper_getResourceUsagePerRequest(conn , "Disk", task_usage_disk_index, task_events_disk_request_index, task_events, task_usage)
+    values_disk ,averages_disk  ,std_devs_disk  =helper_getResourceUsagePerRequest(conn , "Disk", task_usage_disk_index, task_events_disk_request_index, task_events, task_usage)
+    data_disk = {"values" : values_disk, "avg": averages_disk, "std": std_devs_disk}
 
-    print(f"TIME: {time.time() - start}")
+    data = {"cpu": data_cpu , "mem": data_mem, "disk": data_disk}
+    storage_conn.store({"Q6_UsagePerRequest_DF" : data})
+    print("Done")
 
 def run(conn, schema, file_path, is_remote):
     spark = SparkSession.builder.appName("ResourceUsageOptimization").getOrCreate()

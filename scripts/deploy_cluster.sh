@@ -32,6 +32,7 @@ gcloud dataproc clusters create $CLUSTER_NAME \
     --image-version=1.5-debian10 \
     --metadata 'PIP_PACKAGES=google-cloud-storage' \
     --initialization-actions gs://goog-dataproc-initialization-actions-$REGION/python/pip-install.sh \
+    --properties spark:spark.executor.memoryOverhead=1024    
 
 gcloud dataproc clusters describe $CLUSTER_NAME --region=$REGION
 

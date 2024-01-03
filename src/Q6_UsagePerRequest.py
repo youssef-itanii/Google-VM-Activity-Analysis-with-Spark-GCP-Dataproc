@@ -1,12 +1,11 @@
 import math
 import sys
 import time
-
+import util
 # from matplotlib import pyplot as plt
 from schema import Schema
 from spark_connection import SparkConnection
 from storage_handler import StorageHandler
-
 
 
 def helper_getResourceUsagePerRequest(resourceName : str, resourceUsageIndex : int, resourceRequestIndex : int, task_events , task_usage ,is_remote : bool):
@@ -50,10 +49,9 @@ def helper_getResourceUsagePerRequest(resourceName : str, resourceUsageIndex : i
     stats_resource_usage_per_request = stats_resource_usage_per_request.sortByKey().map(lambda x: (x[0],x[1][0],x[1][1])).collect()
     
     values, averages, std_devs = zip(*stats_resource_usage_per_request)
-    print(values)
-    print(averages)
 
-    # if not is_remote:
+    return values,averages,std_devs
+    # if not is_remote: 
     #     # Plotting
     #     plt.figure(figsize=(8, 6))
     #     # TO plot with standard dev
@@ -66,23 +64,29 @@ def helper_getResourceUsagePerRequest(resourceName : str, resourceUsageIndex : i
     #     plt.grid(True)
     #     plt.show()
 
-
+@util.execTime
 def getResourceUsagePerRequest(schema , task_usage, task_events, is_remote):
+    #Function 'getResourceUsagePerRequest' executed in 2551.5603 seconds
     print("Are the tasks that request the more resources the one that consume the more resources?")
     print("-------------------------------------")
-    start = time.time()
     task_usage_cpu_index = schema.getFieldNoByContent("task_usage" , "CPU rate")
     task_events_cpu_request_index = schema.getFieldNoByContent("task_events", "CPU request")
-    helper_getResourceUsagePerRequest("CPU", task_usage_cpu_index, task_events_cpu_request_index, task_events, task_usage, is_remote)
+    values_cpu ,averages_cpu ,std_devs_cpu = helper_getResourceUsagePerRequest("CPU", task_usage_cpu_index, task_events_cpu_request_index, task_events, task_usage, is_remote)
+    data_cpu = {"values" : values_cpu, "avg": averages_cpu, "std": std_devs_cpu}
     
     task_usage_mem_index = schema.getFieldNoByContent("task_usage", "canonical memory usage")
     task_events_mem_request_index = schema.getFieldNoByContent("task_events", "memory request")
-    helper_getResourceUsagePerRequest("Memory", task_usage_mem_index, task_events_mem_request_index,task_events, task_usage, is_remote)
+    values_mem  ,averages_mem  ,std_devs_mem =helper_getResourceUsagePerRequest("Memory", task_usage_mem_index, task_events_mem_request_index,task_events, task_usage, is_remote)
+    data_mem = {"values" : values_mem, "avg": averages_mem, "std": std_devs_mem}
 
     task_usage_disk_index = schema.getFieldNoByContent("task_usage", "local disk space usage")
     task_events_disk_request_index = schema.getFieldNoByContent("task_events", "disk space request")
-    helper_getResourceUsagePerRequest("Disk", task_usage_disk_index, task_events_disk_request_index, task_events, task_usage, is_remote)
-    print(f"TIME: {time.time() -  start}")
+    values_disk ,averages_disk  ,std_devs_disk  =helper_getResourceUsagePerRequest("Disk", task_usage_disk_index, task_events_disk_request_index, task_events, task_usage, is_remote)
+    data_disk = {"values" : values_disk, "avg": averages_disk, "std": std_devs_disk}
+
+    data = {"cpu": data_cpu , "mem": data_mem, "disk": data_disk}
+    storage_conn.store({"Q6_UsagePerRequest" : data})
+    print("Done")
 
 
 def run(conn, schema, file_path ,is_remote):
