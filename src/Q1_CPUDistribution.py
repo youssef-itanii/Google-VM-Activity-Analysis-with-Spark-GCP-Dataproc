@@ -12,7 +12,6 @@ def getCPUDistribution(conn , schema , file_path):
     
     print("What is the distribution of the machines according to their CPU capacity?")
     print("-------------------------------------")
-    start = time.time()
     
     cpu_index = schema.getFieldNoByContent("machine_events", "CPU")
     machine_id_index = schema.getFieldNoByContent("machine_events", "machine ID") 

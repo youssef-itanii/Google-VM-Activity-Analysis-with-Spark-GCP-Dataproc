@@ -1,9 +1,11 @@
 import math
+import sys
 import time
 
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 from schema import Schema
 from spark_connection import SparkConnection
+from storage_handler import StorageHandler
 
 
 
@@ -48,19 +50,21 @@ def helper_getResourceUsagePerRequest(resourceName : str, resourceUsageIndex : i
     stats_resource_usage_per_request = stats_resource_usage_per_request.sortByKey().map(lambda x: (x[0],x[1][0],x[1][1])).collect()
     
     values, averages, std_devs = zip(*stats_resource_usage_per_request)
+    print(values)
+    print(averages)
 
-    if not is_remote:
-        # Plotting
-        plt.figure(figsize=(8, 6))
-        # TO plot with standard dev
-        #plt.errorbar(values, averages, yerr=std_devs, fmt='o', capsize=2, markersize=1)
-        plt.errorbar(values, averages, fmt='o', capsize=2, markersize=1)
-        plt.plot(values, values, linestyle='--', color='red')  # Plot y = x line
-        plt.xlabel(f'Requested {resourceName}')
-        plt.ylabel(f'Used {resourceName}')
-        plt.title(f'Variation of {resourceName} used compared to {resourceName} requested')
-        plt.grid(True)
-        plt.show()
+    # if not is_remote:
+    #     # Plotting
+    #     plt.figure(figsize=(8, 6))
+    #     # TO plot with standard dev
+    #     #plt.errorbar(values, averages, yerr=std_devs, fmt='o', capsize=2, markersize=1)
+    #     plt.errorbar(values, averages, fmt='o', capsize=2, markersize=1)
+    #     plt.plot(values, values, linestyle='--', color='red')  # Plot y = x line
+    #     plt.xlabel(f'Requested {resourceName}')
+    #     plt.ylabel(f'Used {resourceName}')
+    #     plt.title(f'Variation of {resourceName} used compared to {resourceName} requested')
+    #     plt.grid(True)
+    #     plt.show()
 
 
 def getResourceUsagePerRequest(schema , task_usage, task_events, is_remote):
@@ -106,9 +110,13 @@ def run(conn, schema, file_path ,is_remote):
 
 if __name__ == "__main__":
     is_remote = False
-    conn = SparkConnection("local[8]")
+    try:
+        is_remote = True if sys.argv[1] == '1' else False
+    except IndexError:
+        is_remote = False
+    conn = SparkConnection()
     sc = conn.sc
-    file_path = "../data/" if not is_remote else "gs://large-data/data"
+    storage_conn = StorageHandler()
+    file_path = "../data/" if not is_remote else StorageHandler.path_to_data
     schema = Schema(conn , file_path+"/schema.csv")
-
     run(conn, schema, file_path , is_remote)
