@@ -39,7 +39,7 @@ def helper_getResourceUsagePerRequest(resourceName : str, resourceUsageIndex : i
     resource_per_task = avg_requested_resources_per_task.join(avg_used_resources_per_task)
     
     # map (avg_requested_resource, avg_used_resource)
-    resource_usage_per_request = resource_per_task.map(lambda x: (x[1][0],x[1][1]))
+    resource_usage_per_request = resource_per_task.map(lambda x: (round(x[1][0],2),x[1][1]))
 
     # calculate average and std_dev using variance = mean(x^2) - mean(x)^2
     # avg_requested_resource -> (avg_used_resource,std_dev_used_resource)
@@ -57,8 +57,8 @@ def helper_getResourceUsagePerRequest(resourceName : str, resourceUsageIndex : i
     #     # Plotting
     #     plt.figure(figsize=(8, 6))
     #     # TO plot with standard dev
-    #     #plt.errorbar(values, averages, yerr=std_devs, fmt='o', capsize=2, markersize=1)
-    #     plt.errorbar(values, averages, fmt='o', capsize=2, markersize=1)
+    #     plt.errorbar(values, averages, yerr=std_devs, fmt='o', capsize=2, markersize=3)
+    #     #plt.errorbar(values, averages, fmt='o', capsize=2, markersize=1)
     #     plt.plot(values, values, linestyle='--', color='red')  # Plot y = x line
     #     plt.xlabel(f'Requested {resourceName}')
     #     plt.ylabel(f'Used {resourceName}')
