@@ -8,7 +8,7 @@ else
     exit 1
 fi
 
-gcloud dataproc clusters delete $CLUSTER_NAME --region=$REGION
+gcloud dataproc clusters delete $CLUSTER_NAME --region=$REGION --quiet
 
 rm cluster_config.txt
 echo "Deleted configuration file"
