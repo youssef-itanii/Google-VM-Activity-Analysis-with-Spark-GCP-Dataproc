@@ -7,6 +7,7 @@ from schema import Schema
 from spark_connection import SparkConnection
 from pyspark.sql import Row
 from storage_handler import StorageHandler
+from pyspark.sql.functions import col, round
 
 def convertToFloat(val):
     try:
@@ -28,11 +29,13 @@ def helper_getResourceUsagePerRequest(spark, resourceName, resourceUsageIndex, r
     #Compute averages and join
     avg_requested_resources = task_events.groupBy("job_id", "task_id") \
                                                .avg("requested_resource") \
-                                               .withColumnRenamed("avg(requested_resource)", "avg_requested_resource")
+                                        .withColumn("avg_requested_resource", round(col("avg(requested_resource)"), 2)) \
+                                        .drop("avg(requested_resource)")
 
     avg_used_resources = task_usage.groupBy("job_id", "task_id") \
                                          .avg("used_resource") \
-                                         .withColumnRenamed("avg(used_resource)", "avg_used_resource")
+                                         .withColumn("avg_used_resource", round(col("avg(used_resource)"), 2)) \
+                                        .drop("avg(used_resource)")
 
     # (job_id,task_id) -> (avg_requested_resource, avg_used_resource)
     resource_per_task = avg_requested_resources.join(avg_used_resources, ["job_id", "task_id"])

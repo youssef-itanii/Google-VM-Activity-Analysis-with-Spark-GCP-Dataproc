@@ -18,7 +18,7 @@ fi
 
 IS_REMOTE="1"
 
-SRC_PATH="gs://large-data/src"
+SRC_PATH="gs://abbas-youssef-large-data-213/src"
 gcloud dataproc jobs submit pyspark $SRC_PATH/$FILE_NAME \
     --cluster=$CLUSTER_NAME \
     --region=$REGION \

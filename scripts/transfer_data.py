@@ -41,7 +41,7 @@ def process_file(gz_file_url, local_storage_path, destination_bucket, dir_name):
 
 def main():
     source_bucket = 'gs://clusterdata-2011-2'
-    destination_bucket = 'gs://large-data/data'
+    destination_bucket = 'gs://abbas-youssef-large-data-213/data'
     local_storage_path = 'temp'
 
     dir_name = input("Enter the directory name: ")

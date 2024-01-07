@@ -13,7 +13,7 @@ done
 if [ -z "$REGION" ] || [ -z "$ZONE" ] || [ -z "$CLUSTER_NAME" ] ; then
     echo "Usage: $0 -r <region> -z <zone> -n <cluster-name>
 
-NOTE: If you want to create a new bucket, use the -c flag and a bucket will be created with the name 'large-data'.
+NOTE: If you want to create a new bucket, use the -c flag and a bucket will be created with the name 'abbas-youssef-large-data-213'.
 Example: Usage: $0 -r <region> -z <zone> -n <cluster-name> -c 
 =============================================================================================================
 "

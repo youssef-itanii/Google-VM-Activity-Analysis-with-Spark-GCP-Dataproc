@@ -494,7 +494,7 @@ if __name__ == "__main__":
     output = {}
     initiateSpark()
     on_gcp = True
-    file_path = "../data/" if not on_gcp else "gs://large-data/data"
+    file_path = "../data/" if not on_gcp else "gs://abbas-youssef-large-data-213/data"
     schema = Schema(sc , file_path+"/schema.csv")
 
     

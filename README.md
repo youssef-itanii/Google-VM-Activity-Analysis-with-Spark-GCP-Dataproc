@@ -8,7 +8,7 @@ $ ./deploy_cluser -r <region> -z <zone> -n <cluster-name>
 
 You then need to copy your files to the bucket
 ```bash
-$ gsutil cp -r {Target Path} gs://large-data/{Target}
+$ gsutil cp -r {Target Path} gs://abbas-youssef-large-data-213/{Target}
 ```
 If you want to copy a single file, you can remove the -r flag.
 

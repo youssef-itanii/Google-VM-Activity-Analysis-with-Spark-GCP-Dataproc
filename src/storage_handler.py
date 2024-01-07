@@ -2,7 +2,7 @@ import json
 from google.cloud import storage
 
 class StorageHandler:
-    bucket_name = "large-data"
+    bucket_name = "abbas-youssef-large-data-213"
     path_to_data = f"gs://{bucket_name}/data"
     
     def __init__(self):
