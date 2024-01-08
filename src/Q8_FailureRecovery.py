@@ -43,7 +43,7 @@ def getFailureRecovery(schema , task_events):
     time_till_reschedule_and_machine_changed = schedule_and_fail_events_by_task.flatMapValues(lambda x: helper_getTimeUntilRescheduleAndIfMachineChanged(x))
 
     time_till_reschedule = time_till_reschedule_and_machine_changed.map(lambda x: x[1][0]).stats()
-    print(time_till_reschedule)
+    print(f"time till rescehd  {time_till_reschedule}")
 
     check_if_machine_changed = time_till_reschedule_and_machine_changed.map(lambda x: x[1][1])
 
@@ -51,7 +51,12 @@ def getFailureRecovery(schema , task_events):
     num_machine_changed = check_if_machine_changed.sum()
     print(f'count = {check_if_machine_changed_count}')
     print(f'machine_changed = {num_machine_changed}')
-    storage_conn.store({"Q8_percentage_machine_changed":100*float(num_machine_changed)/check_if_machine_changed_count})
+    storage_conn.store({"Q8_FailureRecovery":
+                        {
+                            "Percentage_change": 100*float(num_machine_changed)/check_if_machine_changed_count 
+                            # "time_till_resch": dict(time_till_reschedule)
+                        }
+                    })
 
 def run(conn, schema, file_path):
     task_events = conn.loadData(file_path+"/task_events/*.csv")
